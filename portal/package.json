@@ -1,0 +1,15 @@
+{
+  "name": "mdm-portal",
+  "version": "1.0.0",
+  "description": "Portal simplificado para controlar o Headwind MDM: aparelhos, políticas, horários de bloqueio e mapa de localização",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "pg": "8.13.1"
+  }
+}

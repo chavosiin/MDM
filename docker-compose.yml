@@ -1,0 +1,72 @@
+# docker-compose.yml — Headwind MDM, modo PILOTO LOCAL (HTTP, sem certbot)
+#
+# Baseado no compose oficial (h-mdm/hmdm-docker), adaptado para:
+#  - rodar no Docker Desktop / Windows, sem domínio público
+#  - usar HTTP simples (sem certbot/Let's Encrypt) — adequado para piloto/homologação
+#    na rede interna, NÃO para produção exposta na internet
+#
+# Referência oficial: https://github.com/h-mdm/hmdm-docker
+
+services:
+
+  postgresql:
+    image: postgres:12-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${SQL_USER}
+      POSTGRES_PASSWORD: ${SQL_PASS}
+      POSTGRES_DB: ${SQL_BASE}
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
+
+  hmdm:
+    image: headwindmdm/hmdm:0.1.9
+    restart: unless-stopped
+    depends_on:
+      - postgresql
+    ports:
+      - "8080:8080"   # painel web + provisionamento dos aparelhos: http://SEU_IP:8080/
+      - "31000:31000" # canal de sincronização do agente instalado nos celulares
+    volumes:
+      - ./volumes/work:/usr/local/tomcat/work
+      - ./volumes/hmdm-config:/usr/local/tomcat/conf/Catalina/localhost
+      - ./volumes/webapps:/usr/local/tomcat/webapps
+    environment:
+      SQL_HOST: postgresql
+      SQL_USER: ${SQL_USER}
+      SQL_BASE: ${SQL_BASE}
+      SQL_PASS: ${SQL_PASS}
+      BASE_DOMAIN: ${BASE_DOMAIN}
+      LOCAL_IP: ${LOCAL_IP}
+      PROTOCOL: ${PROTOCOL}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      SHARED_SECRET: ${SHARED_SECRET}
+      HMDM_VARIANT: ${HMDM_VARIANT}
+      DOWNLOAD_CREDENTIALS: ${DOWNLOAD_CREDENTIALS}
+      HMDM_URL: ${HMDM_URL}
+      CLIENT_VERSION: ${CLIENT_VERSION}
+      FORCE_RECONFIGURE: ${FORCE_RECONFIGURE}
+
+  # Portal simplificado (pasta portal\): aparelhos, políticas, horários de bloqueio e mapa.
+  # Também recebe a localização enviada pelo agente personalizado (apk\mdm-agente.apk).
+  portal:
+    build: ./portal
+    restart: unless-stopped
+    depends_on:
+      - postgresql
+      - hmdm
+    ports:
+      - "${PORTAL_PORT:-8090}:8090"   # http://SEU_IP:8090/
+    environment:
+      SQL_HOST: postgresql
+      SQL_USER: ${SQL_USER}
+      SQL_BASE: ${SQL_BASE}
+      SQL_PASS: ${SQL_PASS}
+      HMDM_INTERNAL_URL: http://hmdm:8080
+      MDM_API_URL: ${MDM_API_URL}
+      MDM_API_USER: ${MDM_API_USER}
+      MDM_API_PASS: ${MDM_API_PASS}
+      PORTAL_SECRET: ${PORTAL_SECRET}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}   # vazio = mapa do OpenStreetMap
+      PORTAL_FUSO: America/Sao_Paulo
+      PORTAL_DIAS_LOCALIZACAO: ${PORTAL_DIAS_LOCALIZACAO:-0}   # dias de histórico de localização (0 = guarda tudo)

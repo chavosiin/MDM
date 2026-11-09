@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal MDM</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Ícones (usados com <svg><use href="#i-..."/></svg>) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-inicio" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-celular" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-regras" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+    <symbol id="i-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-lista" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h0M4 12h0M4 18h0"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="i-grupo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 1.8 6 5"/></symbol>
+  </defs>
+</svg>
+
+<!-- Login -->
+<section id="tela-login" class="login" hidden>
+  <form id="form-login" class="cartao login-cartao">
+    <h1>Portal MDM</h1>
+    <p class="suave">Entre com o mesmo usuário e senha do painel Headwind.</p>
+    <label>Usuário <input name="usuario" autocomplete="username" required></label>
+    <label>Senha <input name="senha" type="password" autocomplete="current-password" required></label>
+    <button class="primario grande" type="submit">Entrar</button>
+    <p id="erro-login" class="erro"></p>
+  </form>
+</section>
+
+<!-- Aplicação -->
+<div id="tela-app" hidden>
+  <header class="topo">
+    <strong class="marca">Portal MDM</strong>
+    <nav id="abas">
+      <button data-aba="inicio"><svg><use href="#i-inicio"/></svg>Início</button>
+      <button data-aba="bloqueios"><svg><use href="#i-cadeado"/></svg>Horário dos apps</button>
+      <button data-aba="aparelhos"><svg><use href="#i-celular"/></svg>Celulares</button>
+      <button data-aba="grupos"><svg><use href="#i-grupo"/></svg>Grupos</button>
+      <button data-aba="mapa"><svg><use href="#i-mapa"/></svg>Mapa</button>
+      <button data-aba="locais"><svg><use href="#i-relogio"/></svg>Histórico de localização</button>
+      <button data-aba="politicas"><svg><use href="#i-regras"/></svg>Políticas</button>
+      <button data-aba="historico"><svg><use href="#i-lista"/></svg>Histórico de ações</button>
+    </nav>
+    <div class="topo-dir">
+      <a id="link-painel" target="_blank" rel="noopener" title="Abre o painel Headwind (porta 8080), com todas as opções">Painel completo ↗</a>
+      <span id="usuario" class="suave"></span>
+      <button id="sair" class="discreto">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Início -->
+    <section data-painel="inicio">
+      <h2 class="titulo-pagina">O que você quer fazer?</h2>
+      <div class="atalhos">
+        <button class="atalho destaque" data-ir="novo-bloqueio">
+          <svg><use href="#i-cadeado"/></svg>
+          <strong>Horário de uso dos apps</strong>
+          <span>Ex.: WhatsApp liberado só no expediente, YouTube bloqueado</span>
+        </button>
+        <button class="atalho" data-ir="mapa">
+          <svg><use href="#i-mapa"/></svg>
+          <strong>Ver onde estão os celulares</strong>
+          <span>Posição atual e trajeto do dia</span>
+        </button>
+        <button class="atalho" data-ir="aparelhos">
+          <svg><use href="#i-celular"/></svg>
+          <strong>Ver os celulares</strong>
+          <span>Bateria, último contato e política de cada um</span>
+        </button>
+        <button class="atalho" data-ir="politicas">
+          <svg><use href="#i-regras"/></svg>
+          <strong>Escolher os apps de cada política</strong>
+          <span>Deixar app liberado, escondido ou desinstalado</span>
+        </button>
+      </div>
+
+      <h2 class="titulo-pagina">Situação agora</h2>
+      <div id="inicio-numeros" class="numeros"></div>
+      <div class="duas-colunas-iguais">
+        <div class="cartao">
+          <h3>Bloqueios valendo agora</h3>
+          <div id="inicio-bloqueios"></div>
+        </div>
+        <div class="cartao">
+          <h3>Precisam de atenção</h3>
+          <div id="inicio-alertas"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bloqueio de apps por horário -->
+    <section data-painel="bloqueios" hidden>
+      <div class="barra">
+        <div>
+          <h2>Horário de uso dos apps</h2>
+          <p class="suave sem-margem">Escolha se o app fica <b>bloqueado</b> no horário marcado ou se ele <b>só pode ser usado</b> nesse horário.
+            Nada é desinstalado e nenhum dado é apagado.</p>
+        </div>
+        <button id="novo-bloqueio" class="primario grande"><svg><use href="#i-mais"/></svg>Novo bloqueio</button>
+      </div>
+      <div id="lista-bloqueios" class="grade-cartoes"></div>
+      <details class="ajuda">
+        <summary>Como funciona?</summary>
+        <ul>
+          <li>No horário do bloqueio, o ícone do app fica cinza e, ao tocar, o celular mostra
+            “bloqueado pelo administrador”.</li>
+          <li><b>Bloquear no horário:</b> o app não abre só dentro do horário marcado.</li>
+          <li><b>Liberar só no horário:</b> o app só abre dentro do horário marcado. Fora dele (e nos dias não marcados), fica bloqueado.</li>
+          <li>O celular confere as regras a cada minuto. Depois de salvar, espere até 1 minuto.</li>
+          <li>O celular guarda as regras, então o bloqueio vale mesmo sem internet. Só uma regra nova
+            ou alterada precisa de conexão com o servidor para chegar ao celular.</li>
+          <li>Só funciona nos celulares cadastrados com controle total (agente 6.42 ou mais novo).</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- Celulares -->
+    <section data-painel="aparelhos" hidden>
+      <div class="barra">
+        <h2>Celulares</h2>
+        <input id="filtro-aparelhos" type="search" placeholder="Buscar por nome, grupo ou política">
+        <button id="atualizar-aparelhos" class="discreto">Atualizar lista</button>
+        <button id="novo-aparelho" class="primario"><svg><use href="#i-mais"/></svg>Novo celular</button>
+      </div>
+      <div class="tabela-rolagem">
+        <table>
+          <thead><tr>
+            <th>Celular</th><th>Grupo</th><th>Política</th><th>Último contato</th>
+            <th>Bateria</th><th>Localização</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="lista-aparelhos"></tbody>
+        </table>
+      </div>
+      <p class="suave nota"><b>Aplicar agora</b>: o celular busca as mudanças na hora, sem esperar.
+        <b>Tela inicial</b>: fecha o app aberto e volta para a tela do MDM.
+        <b>Editar</b>: descrição, política e grupos do celular.
+        Trocar a <b>política</b> muda todas as regras daquele celular.</p>
+    </section>
+
+    <!-- Grupos -->
+    <section data-painel="grupos" hidden>
+      <div class="barra">
+        <div>
+          <h2>Grupos</h2>
+          <p class="suave sem-margem">Grupos juntam celulares para aplicar bloqueios de uma vez.
+            Um celular pode estar em mais de um grupo.</p>
+        </div>
+        <button id="novo-grupo" class="primario grande"><svg><use href="#i-mais"/></svg>Novo grupo</button>
+      </div>
+      <div id="lista-grupos" class="grade-cartoes"></div>
+    </section>
+
+    <!-- Mapa -->
+    <section data-painel="mapa" hidden>
+      <div class="barra">
+        <h2>Mapa</h2>
+        <select id="mapa-aparelho"><option value="">Todos os celulares (última posição)</option></select>
+        <input id="mapa-data" type="date" title="Dia do trajeto">
+        <label class="check" title="Desenha o trajeto pelas ruas, usando só as posições de GPS"><input type="checkbox" id="mapa-ruas" checked> Seguir as ruas</label>
+        <span id="mapa-info" class="suave"></span>
+      </div>
+      <div id="mapa"></div>
+      <p class="suave nota">Escolha um celular para ver o trajeto do dia. O mapa se atualiza sozinho a cada 1 minuto.
+        Só aparecem celulares com “Rastrear localização” ligado na política deles. Pontos cinza são posições pouco
+        precisas (pela antena, erro de mais de 60 m) e ficam fora da linha do trajeto. Use o botão no canto do mapa para ver satélite.</p>
+    </section>
+
+    <!-- Histórico de localização -->
+    <section data-painel="locais" hidden>
+      <div class="barra">
+        <h2>Histórico de localização</h2>
+        <select id="locais-aparelho"><option value="">Todos os celulares</option></select>
+        <label class="inline">De <input id="locais-de" type="date"></label>
+        <label class="inline">Até <input id="locais-ate" type="date"></label>
+        <div class="periodos" role="group" aria-label="Período">
+          <button type="button" class="discreto" data-periodo="0">Hoje</button>
+          <button type="button" class="discreto" data-periodo="6">7 dias</button>
+          <button type="button" class="discreto" data-periodo="29">30 dias</button>
+          <button type="button" class="discreto" data-periodo="tudo">Tudo</button>
+        </div>
+        <label class="inline" title="Mostra só as posições com erro até esse valor">Precisão
+          <select id="locais-precisao">
+            <option value="">Todas</option>
+            <option value="60">Até 60 m</option>
+            <option value="20">Até 20 m</option>
+            <option value="10">Até 10 m</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="locais-todas"> Mostrar cada atualização</label>
+        <button id="locais-csv" class="discreto" title="Baixa a lista em planilha (CSV)">Baixar planilha</button>
+      </div>
+      <div class="locais">
+        <div class="cartao locais-lista">
+          <div id="locais-resumo" class="suave"></div>
+          <ol id="locais-itens"></ol>
+        </div>
+        <div id="mapa-locais"></div>
+      </div>
+      <p class="suave nota">As localizações mais recentes aparecem primeiro. Paradas juntam as posições seguidas no mesmo lugar. Clique numa linha para ver o ponto no mapa.
+        O endereço é aproximado (OpenStreetMap). Posições com erro grande vieram da antena, sem GPS.</p>
+    </section>
+
+    <!-- Políticas -->
+    <section data-painel="politicas" hidden>
+      <div class="barra">
+        <div>
+          <h2>Políticas</h2>
+          <p class="suave sem-margem">A política é o conjunto de regras de um celular: quais apps ele tem e se a
+            localização é rastreada. Cada celular segue uma política (veja em <a href="#" data-ir="aparelhos">Celulares</a>).</p>
+        </div>
+      </div>
+      <div class="duas-colunas">
+        <ul id="lista-politicas" class="lista-selecao"></ul>
+        <div id="detalhe-politica" class="cartao"><p class="suave">← Escolha uma política na lista.</p></div>
+      </div>
+    </section>
+
+    <!-- Histórico -->
+    <section data-painel="historico" hidden>
+      <div class="barra"><h2>Histórico de ações</h2><button id="atualizar-historico" class="discreto">Atualizar</button></div>
+      <div class="tabela-rolagem">
+        <table>
+          <thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Detalhe</th></tr></thead>
+          <tbody id="lista-historico"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Janela: bloqueio de apps (passo a passo) -->
+<dialog id="dialogo-bloqueio" class="largo">
+  <form id="form-bloqueio" method="dialog" class="form-grade">
+    <h3 id="titulo-bloqueio">Novo bloqueio</h3>
+
+    <section class="passo">
+      <h4><span class="num">1</span> Quais apps bloquear?</h4>
+      <div id="apps-escolhidos" class="chips"></div>
+      <input id="busca-app-bloqueio" type="search" placeholder="Procurar app pelo nome (ex.: YouTube)">
+      <div id="lista-apps-bloqueio" class="grade-apps"></div>
+      <details class="ajuda-pequena">
+        <summary>Não achou o app?</summary>
+        <p class="suave">Os apps instalados aparecem aqui quando os celulares enviam a lista (a cada
+          mudança). Também dá para digitar o nome do pacote, que aparece no endereço do app na Play Store
+          (<code>play.google.com/store/apps/details?id=<b>com.exemplo.app</b></code>).</p>
+        <input name="extras" placeholder="Ex.: com.exemplo.app (separe vários por vírgula)">
+      </details>
+    </section>
+
+    <section class="passo">
+      <h4><span class="num">2</span> Bloquear ou liberar? E quando?</h4>
+      <div class="modos" role="radiogroup">
+        <label><input type="radio" name="modo" value="bloquear" checked><span><b>Bloquear no horário</b>O app não abre dentro do horário escolhido</span></label>
+        <label><input type="radio" name="modo" value="liberar"><span><b>Liberar só no horário</b>O app só abre dentro do horário escolhido; fora dele fica bloqueado</span></label>
+      </div>
+      <div class="presets">
+        <button type="button" data-preset="comercial">Horário comercial<span>seg a sex, 08:00–18:00</span></button>
+        <button type="button" data-preset="almoco">Almoço<span>seg a sex, 12:00–13:00</span></button>
+        <button type="button" data-preset="noite">À noite<span>todo dia, 22:00–06:00</span></button>
+        <button type="button" data-preset="sempre">O dia todo<span>todo dia, 24 horas</span></button>
+      </div>
+      <div class="dias-botoes" role="group" aria-label="Dias da semana">
+        <label><input type="checkbox" name="dia" value="1"><span>Seg</span></label>
+        <label><input type="checkbox" name="dia" value="2"><span>Ter</span></label>
+        <label><input type="checkbox" name="dia" value="3"><span>Qua</span></label>
+        <label><input type="checkbox" name="dia" value="4"><span>Qui</span></label>
+        <label><input type="checkbox" name="dia" value="5"><span>Sex</span></label>
+        <label><input type="checkbox" name="dia" value="6"><span>Sáb</span></label>
+        <label><input type="checkbox" name="dia" value="0"><span>Dom</span></label>
+      </div>
+      <div class="linha">
+        <label>Das <input name="inicio" type="time" required></label>
+        <label>Até as <input name="fim" type="time" required></label>
+      </div>
+    </section>
+
+    <section class="passo">
+      <h4><span class="num">3</span> Em quais celulares?</h4>
+      <select name="grupoId"></select>
+    </section>
+
+    <section class="passo">
+      <h4><span class="num">4</span> Nome do bloqueio <span class="suave">(opcional)</span></h4>
+      <input name="nome" placeholder="Se deixar em branco, usamos o nome dos apps">
+    </section>
+
+    <div id="frase-bloqueio" class="frase"></div>
+    <p id="erro-bloqueio" class="erro"></p>
+    <div class="acoes">
+      <button type="button" id="cancelar-bloqueio" class="discreto">Cancelar</button>
+      <button type="submit" class="primario grande">Salvar bloqueio</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Janela: cadastro de celular -->
+<dialog id="dialogo-aparelho">
+  <form id="form-aparelho" method="dialog" class="form-grade">
+    <h3 id="titulo-aparelho">Novo celular</h3>
+    <label>Número (identificação) <input name="numero" required placeholder="Ex.: vendedor-joao" autocomplete="off">
+      <span class="suave dica">É o que se digita no celular ao cadastrar o agente. Sem espaços. Não muda depois.</span></label>
+    <label>Descrição <input name="descricao" placeholder="Ex.: João Silva - Moto g54"></label>
+    <label>Política <select name="politicaId" required></select></label>
+    <fieldset class="lista-checks">
+      <legend>Grupos</legend>
+      <div id="aparelho-grupos"></div>
+    </fieldset>
+    <div class="linha">
+      <label>IMEI <span class="suave">(opcional)</span> <input name="imei" autocomplete="off"></label>
+      <label>Telefone <span class="suave">(opcional)</span> <input name="telefone" autocomplete="off"></label>
+    </div>
+    <p id="erro-aparelho" class="erro"></p>
+    <div class="acoes">
+      <button type="button" id="excluir-aparelho" class="perigo discreto">Excluir celular</button>
+      <span class="espaco"></span>
+      <button type="button" id="cancelar-aparelho" class="discreto">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Janela: grupo -->
+<dialog id="dialogo-grupo">
+  <form id="form-grupo" method="dialog" class="form-grade">
+    <h3 id="titulo-grupo">Novo grupo</h3>
+    <label>Nome do grupo <input name="nome" required placeholder="Ex.: Vendedores externos"></label>
+    <fieldset class="lista-checks">
+      <legend>Celulares deste grupo</legend>
+      <div id="grupo-aparelhos"></div>
+    </fieldset>
+    <p id="erro-grupo" class="erro"></p>
+    <div class="acoes">
+      <button type="button" id="cancelar-grupo" class="discreto">Cancelar</button>
+      <button type="submit" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="aviso" class="aviso" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/dist/Leaflet.GoogleMutant.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

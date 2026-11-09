@@ -1,0 +1,22 @@
+.env
+volumes/
+backups/
+*.log
+assinatura-apk/
+portal/node_modules/
+
+# APKs e arquivos de assinatura
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Agente Android: so o codigo-fonte
+agente-android/build/
+agente-android/app/build/
+agente-android/.gradle/
+agente-android/local.properties
+agente-android/.idea/
+
+# Configuracao local do Claude Code
+.claude/settings.local.json
